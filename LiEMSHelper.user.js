@@ -4,7 +4,7 @@
 // @description        LiEMS强化扩展工具
 // @description:en     An enhanced and extended tool for LiEMS.
 // @namespace          https://github.com/HaleShaw
-// @version            1.0.0
+// @version            1.0.1
 // @author             HaleShaw
 // @copyright          2023+, HaleShaw (https://github.com/HaleShaw)
 // @license            AGPL-3.0-or-later
@@ -3931,17 +3931,29 @@
     Toolkit.initData();
     const origin = location.origin;
     const settings = new SettingsModule.settingsDialog().settings;
+
+    // 处理运营管理平台
     const platformAddress = settings.platform.address;
     if (platformAddress === origin) {
       PlatformModule.routing();
       return;
     }
-    settings.projects.forEach(project => {
+
+    // 处理LiEMS
+    let foundProject = false;
+    for (let i = 0; i < settings.projects.length; i++) {
+      const project = settings.projects[i];
       if (project.addresses.includes(origin)) {
         LiEMSModule.routing(project);
-        return;
+        foundProject = true;
+        break;
       }
-    });
+    }
+    if (foundProject) {
+      return;
+    }
+
+    // 处理其他网页
     GM_registerMenuCommand("⚙️设置", SettingsModule.toggleSettings);
   }
   main();
