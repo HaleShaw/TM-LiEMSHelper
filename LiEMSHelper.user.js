@@ -4,7 +4,7 @@
 // @description        LiEMS强化扩展工具
 // @description:en     An enhanced and extended tool for LiEMS.
 // @namespace          https://github.com/HaleShaw
-// @version            1.0.1
+// @version            1.0.2
 // @author             HaleShaw
 // @copyright          2023+, HaleShaw (https://github.com/HaleShaw)
 // @license            AGPL-3.0-or-later
@@ -3620,10 +3620,10 @@
      */
     handleLogin: function () {
       setTimeout(() => {
-        const users = Object.values(GM_getValue("Luculent")?.users || {});
-        if (!users.length) return;
+        const settingsDialog = new SettingsModule.settingsDialog();
+        const { account, password } = settingsDialog.settings.platform;
+        if (!account || account === "" || !password || password === "") return;
 
-        const { name, password } = users[0];
         const loginBtn = document.querySelector(
           "div.login-right-info > div.login-right-info-btn > button"
         );
@@ -3632,7 +3632,7 @@
         );
 
         if (loginBtn?.textContent === "登录" && userInput && pwdInput) {
-          userInput.value = name;
+          userInput.value = account;
           pwdInput.value = password;
           loginBtn.click();
         }
