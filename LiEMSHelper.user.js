@@ -4,7 +4,7 @@
 // @description        LiEMS强化扩展工具
 // @description:en     An enhanced and extended tool for LiEMS.
 // @namespace          https://github.com/HaleShaw
-// @version            1.0.2
+// @version            1.0.3
 // @author             HaleShaw
 // @copyright          2023+, HaleShaw (https://github.com/HaleShaw)
 // @license            AGPL-3.0-or-later
@@ -3632,8 +3632,13 @@
         );
 
         if (loginBtn?.textContent === "登录" && userInput && pwdInput) {
-          userInput.value = account;
-          pwdInput.value = password;
+          Toolkit.setValue(userInput, account);
+
+          // 使用模拟事件输入了用户名后，强制触发一次失焦事件，以触发通过用户名获取公司信息的逻辑。
+          // 否则，可能会弹出错误提示“无法获取用户公司”。
+          userInput.blur();
+
+          Toolkit.setValue(pwdInput, password);
           loginBtn.click();
         }
       }, 1e3);
