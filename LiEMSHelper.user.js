@@ -4,7 +4,7 @@
 // @description        LiEMS强化扩展工具
 // @description:en     An enhanced and extended tool for LiEMS.
 // @namespace          https://github.com/HaleShaw
-// @version            1.0.3
+// @version            1.0.4
 // @author             HaleShaw
 // @copyright          2023+, HaleShaw (https://github.com/HaleShaw)
 // @license            AGPL-3.0-or-later
@@ -375,7 +375,6 @@
     a.commonMenu-item:hover {
       background-color: #4f81f1;
       color: #fff;
-      transform: translateY(-2px);
     }
     `,
       LuculentExamStyle: `
@@ -2023,6 +2022,43 @@
       height: 14px;
     }
 
+    .liems-drag-handle {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 24px;
+      height: 24px;
+      color: #9ca3af;
+      cursor: grab;
+      flex-shrink: 0;
+      border-radius: 4px;
+      transition: all 0.2s;
+    }
+
+    .liems-drag-handle:hover {
+      background: #f3f4f6;
+      color: #6b7280;
+    }
+
+    .liems-drag-handle:active {
+      cursor: grabbing;
+    }
+
+    .liems-form-row.dragging {
+      opacity: 0.5;
+      background: #f3f4f6;
+    }
+
+    .liems-form-row.drag-over {
+      border-top: 2px solid rgb(72, 128, 255);
+      margin-top: -2px;
+    }
+
+    .liems-form-row.drag-over-bottom {
+      border-bottom: 2px solid rgb(72, 128, 255);
+      margin-bottom: -2px;
+    }
+
     .liems-add-link {
       display: flex;
       align-items: center;
@@ -2398,6 +2434,8 @@
         '<svg aria-hidden="true" focusable="false" class="octicon octicon-mark-github" viewBox="0 0 24 24" width="32" height="32" fill="currentColor" display="inline-block" overflow="visible" style="vertical-align:text-bottom"><path d="M12 1C5.923 1 1 5.923 1 12c0 4.867 3.149 8.979 7.521 10.436.55.096.756-.233.756-.522 0-.262-.013-1.128-.013-2.049-2.764.509-3.479-.674-3.699-1.292-.124-.317-.66-1.293-1.127-1.554-.385-.207-.936-.715-.014-.729.866-.014 1.485.797 1.691 1.128.99 1.663 2.571 1.196 3.204.907.096-.715.385-1.196.701-1.471-2.448-.275-5.005-1.224-5.005-5.432 0-1.196.426-2.186 1.128-2.956-.111-.275-.496-1.402.11-2.915 0 0 .921-.288 3.024 1.128a10.193 10.193 0 0 1 2.75-.371c.936 0 1.871.123 2.75.371 2.104-1.43 3.025-1.128 3.025-1.128.605 1.513.221 2.64.111 2.915.701.77 1.127 1.747 1.127 2.956 0 4.222-2.571 5.157-5.019 5.432.399.344.743 1.004.743 2.035 0 1.471-.014 2.654-.014 3.025 0 .289.206.632.756.522C19.851 20.979 23 16.854 23 12c0-6.077-4.922-11-11-11Z"></path></svg>',
       luculent:
         '<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" version="1.1" x="0px" y="0px" width="48px" height="48px" viewBox="0 0 48 48" enable-background="new 0 0 48 48" xml:space="preserve">  <image id="image0" width="48" height="48" x="0" y="0" xlink:href="data:image/png;base64,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"/></svg>',
+      drag:
+        '<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" style="width:14px;height:14px"><path stroke-linecap="round" stroke-linejoin="round" d="M4 8h.01M4 12h.01M4 16h.01M8 8h.01M8 12h.01M8 16h.01M12 8h.01M12 12h.01M12 16h.01M16 8h.01M16 12h.01M16 16h.01" /></svg>',
     },
     defaultShortcuts: [
       { id: 1, shortcut: "Alt + F2", description: "打开/关闭设置" },
@@ -3032,7 +3070,8 @@
               ${cat.items
                 .map(
                   item => `
-                <div class="liems-form-row" data-item-id="${item.id}">
+                <div class="liems-form-row" data-item-id="${item.id}" draggable="true">
+                  <span class="liems-drag-handle" title="拖动排序">${SettingsModule.icons.drag}</span>
                   <input type="text" class="liems-input liems-input-menu" value="${item.menuName}" data-item-field="menuName" placeholder="菜单名 *" />
                   <input type="text" class="liems-input liems-input-md" value="${item.programId}" data-item-field="programId" placeholder="程序号 *" />
                   <input type="text" class="liems-input liems-input-flex" value="${item.tooltip}" data-item-field="tooltip" placeholder="提示语（可选）" />
@@ -3401,6 +3440,85 @@
           };
           reader.readAsText(file);
           e.target.value = "";
+        });
+
+        // 拖动排序
+        this.overlay.addEventListener("dragstart", e => {
+          const row = e.target.closest(".liems-form-row");
+          if (!row) return;
+          row.classList.add("dragging");
+          e.dataTransfer.setData("text/plain", row.dataset.itemId);
+          e.dataTransfer.effectAllowed = "move";
+        });
+
+        this.overlay.addEventListener("dragend", e => {
+          const row = e.target.closest(".liems-form-row");
+          if (!row) return;
+          row.classList.remove("dragging");
+          this.overlay.querySelectorAll(".drag-over, .drag-over-bottom").forEach(el => {
+            el.classList.remove("drag-over", "drag-over-bottom");
+          });
+        });
+
+        this.overlay.addEventListener("dragover", e => {
+          const row = e.target.closest(".liems-form-row");
+          if (!row || row.classList.contains("dragging")) return;
+          e.preventDefault();
+          e.dataTransfer.dropEffect = "move";
+        });
+
+        this.overlay.addEventListener("dragenter", e => {
+          const row = e.target.closest(".liems-form-row");
+          if (!row || row.classList.contains("dragging")) return;
+          e.preventDefault();
+          const rect = row.getBoundingClientRect();
+          const midpoint = rect.top + rect.height / 2;
+          this.overlay.querySelectorAll(".drag-over, .drag-over-bottom").forEach(el => {
+            el.classList.remove("drag-over", "drag-over-bottom");
+          });
+          if (e.clientY < midpoint) {
+            row.classList.add("drag-over");
+          } else {
+            row.classList.add("drag-over-bottom");
+          }
+        });
+
+        this.overlay.addEventListener("dragleave", e => {
+          const row = e.target.closest(".liems-form-row");
+          if (!row) return;
+          if (!row.contains(e.relatedTarget)) {
+            row.classList.remove("drag-over", "drag-over-bottom");
+          }
+        });
+
+        this.overlay.addEventListener("drop", e => {
+          e.preventDefault();
+          const targetRow = e.target.closest(".liems-form-row");
+          if (!targetRow) return;
+          const draggedId = e.dataTransfer.getData("text/plain");
+          if (!draggedId || draggedId === targetRow.dataset.itemId) return;
+
+          const card = targetRow.closest("[data-category-id]");
+          const categoryId = card.dataset.categoryId;
+          const category = this.settings.platform.menuCategories.find(c => c.id === categoryId);
+          if (!category) return;
+
+          const draggedIndex = category.items.findIndex(i => i.id === draggedId);
+          const targetIndex = category.items.findIndex(i => i.id === targetRow.dataset.itemId);
+          if (draggedIndex === -1 || targetIndex === -1) return;
+
+          const rect = targetRow.getBoundingClientRect();
+          const midpoint = rect.top + rect.height / 2;
+          let insertIndex = e.clientY < midpoint ? targetIndex : targetIndex + 1;
+
+          if (draggedIndex < insertIndex) {
+            insertIndex -= 1;
+          }
+
+          const [draggedItem] = category.items.splice(draggedIndex, 1);
+          category.items.splice(insertIndex, 0, draggedItem);
+
+          this.renderActiveTab();
         });
       }
 
