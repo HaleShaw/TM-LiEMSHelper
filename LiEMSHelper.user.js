@@ -1895,7 +1895,8 @@
       min-height: 36px;
     }
 
-    .liems-project-header .liems-delete-btn {
+    .liems-project-header .liems-delete-btn,
+    .liems-category-header .liems-delete-btn {
       margin-left: auto;
       flex-shrink: 0;
     }
@@ -1930,13 +1931,6 @@
 
     .liems-collapse-btn.collapsed svg {
       transform: rotate(-90deg);
-    }
-
-    .liems-project-name {
-      flex: 1;
-      font-size: 14px;
-      font-weight: 600;
-      color: rgb(72, 128, 255);
     }
 
     .liems-project-name-input {
@@ -2008,10 +2002,44 @@
       margin-bottom: 0;
     }
 
+    .liems-category-name-input {
+      height: 36px;
+      min-width: 200px;
+      flex: 1;
+      padding: 0 12px;
+      background: #fafbfc;
+      border: 1px solid #e2e4e8;
+      border-radius: 6px;
+      color: #1a1a2e;
+      font-size: 14px;
+      outline: none;
+      transition: all 0.2s;
+    }
+
+    .liems-category-name-input:focus {
+      border-color: rgb(72, 128, 255);
+      box-shadow: 0 0 0 2px rgba(72, 128, 255, 0.2);
+      background: #ffffff;
+    }
+
+    .liems-category-name-input::placeholder {
+      color: #9ca3af;
+    }
+
+    .liems-category-name-input.error {
+      border-color: #ef4444;
+    }
+
+    .liems-category-name-input.error:focus {
+      border-color: #ef4444;
+      box-shadow: 0 0 0 2px rgba(239, 68, 68, 0.2);
+    }
+
     .liems-project-header {
       display: flex;
       align-items: center;
       gap: 8px;
+      margin-bottom: 12px;
       min-height: 36px;
     }
 
@@ -2021,6 +2049,19 @@
 
     .liems-card.liems-project-expanded .liems-project-header {
       margin-bottom: 12px;
+    }
+
+    .liems-category-header {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 12px;
+      min-height: 36px;
+    }
+
+    .liems-category-header > .liems-label {
+      flex-shrink: 0;
+      width: 70px;
     }
 
     .liems-label {
@@ -2884,6 +2925,12 @@
           if (!project.name.trim()) {
             errors.push({ type: "project", project: pIndex, field: "name" });
           }
+          // 验证服务器地址 - 检查每个地址是否为空
+          project.addresses.forEach((addr, addrIndex) => {
+            if (!addr || addr.trim() === "") {
+              errors.push({ type: "address", project: pIndex, address: addrIndex });
+            }
+          });
           // 验证认证信息
           project.auths.forEach((auth, aIndex) => {
             if (!auth.display.trim()) {
@@ -2909,6 +2956,9 @@
           errors.push({ type: "platform", field: "password" });
         }
         this.settings.platform.menuCategories.forEach((category, cIndex) => {
+          if (!category.categoryName.trim()) {
+            errors.push({ type: "category", category: cIndex, field: "categoryName" });
+          }
           category.items.forEach((item, iIndex) => {
             if (!item.menuName.trim()) {
               errors.push({ type: "menu", category: cIndex, item: iIndex, field: "menuName" });
@@ -2931,6 +2981,22 @@
 
         errors.forEach(err => {
           if (err.type === "project") {
+            const projectCards = this.overlay.querySelectorAll(".liems-card[data-project-id]");
+            const projectCard = projectCards[err.project];
+            if (projectCard) {
+              // 如果项目是折叠的，先展开
+              const collapseBtn = projectCard.querySelector(".liems-collapse-btn");
+              const content = projectCard.querySelector(".liems-project-content");
+              if (collapseBtn && content && collapseBtn.classList.contains("collapsed")) {
+                collapseBtn.classList.remove("collapsed");
+                content.classList.remove("collapsed");
+              }
+              if (err.field === "name") {
+                const input = projectCard.querySelector(`[data-field="${err.field}"]`);
+                if (input) input.classList.add("error");
+              }
+            }
+          } else if (err.type === "address") {
             const projectCard = this.overlay.querySelectorAll(".liems-card[data-project-id]")[err.project];
             if (projectCard) {
               // 如果项目是折叠的，先展开
@@ -2940,8 +3006,11 @@
                 collapseBtn.classList.remove("collapsed");
                 content.classList.remove("collapsed");
               }
-              const input = projectCard.querySelector(`[data-field="${err.field}"]`);
-              if (input) input.classList.add("error");
+              // 给对应索引的地址输入框添加错误样式
+              const addressInputs = projectCard.querySelectorAll(".liems-form-address input");
+              if (addressInputs[err.address]) {
+                addressInputs[err.address].classList.add("error");
+              }
             }
           } else if (err.type === "auth") {
             const projectCard = this.overlay.querySelectorAll(".liems-card[data-project-id]")[err.project];
@@ -2956,8 +3025,14 @@
             const platformCard = this.overlay.querySelectorAll(".liems-card")[0];
             const input = platformCard.querySelector(`[data-platform-field="${err.field}"]`);
             if (input) input.classList.add("error");
+          } else if (err.type === "category") {
+            const categoryCard = this.overlay.querySelectorAll(".liems-card[data-category-id]")[err.category];
+            if (categoryCard) {
+              const input = categoryCard.querySelector(`[data-category-field="${err.field}"]`);
+              if (input) input.classList.add("error");
+            }
           } else if (err.type === "menu") {
-            const categoryCard = this.overlay.querySelectorAll("[data-category-id]")[err.category];
+            const categoryCard = this.overlay.querySelectorAll(".liems-card[data-category-id]")[err.category];
             if (categoryCard) {
               const itemRow = categoryCard.querySelectorAll(".liems-form-row")[err.item];
               if (itemRow) {
@@ -3199,25 +3274,23 @@
           .map(
             cat => `
           <div class="liems-card" data-category-id="${cat.id}">
-            <div style="display:flex;justify-content:space-between;margin-bottom:16px">
-              <div class="liems-form-group" style="width:256px;margin-bottom:0">
-                <label class="liems-label liems-label-required">分类名称</label>
-                <input type="text" class="liems-input" value="${cat.categoryName}" data-category-field="categoryName" placeholder="请输入分类名称" />
-              </div>
-              <button class="liems-delete-btn" data-action="remove-category" data-category-id="${cat.id}" style="margin-top:20px">
-                ${SettingsModule.icons.minus} 删除分类
+            <div class="liems-category-header">
+              <label class="liems-label liems-label-required">分类名称</label>
+              <input type="text" class="liems-category-name-input" value="${cat.categoryName}" data-category-field="categoryName" placeholder="请输入分类名称 *" />
+              <button class="liems-delete-btn" data-action="remove-category" data-category-id="${cat.id}">
+                ${SettingsModule.icons.minus} 删除
               </button>
             </div>
 
-            <div class="liems-form-group">
+            <div class="liems-form-group liems-form-group-last">
               <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
                 <label class="liems-label">菜单项</label>
                 <button class="liems-add-link" data-action="add-menu-item" data-category-id="${cat.id}">${SettingsModule.icons.plus} 添加菜单</button>
               </div>
               ${cat.items
                 .map(
-                  item => `
-                <div class="liems-form-row" data-item-id="${item.id}" draggable="true">
+                  (item, itemIndex) => `
+                <div class="liems-form-row ${itemIndex === cat.items.length - 1 ? 'liems-form-row-last' : ''}" data-item-id="${item.id}" draggable="true">
                   <span class="liems-drag-handle" title="拖动排序">${SettingsModule.icons.drag}</span>
                   <input type="text" class="liems-input liems-input-menu" value="${item.menuName}" data-item-field="menuName" placeholder="菜单名 *" />
                   <input type="text" class="liems-input liems-input-md" value="${item.programId}" data-item-field="programId" placeholder="程序号 *" />
@@ -3508,7 +3581,7 @@
 
           // 项目名称
           if (input.dataset.field === "name") {
-            const card = input.closest("[data-project-id]");
+            const card = input.closest(".liems-card");
             const projectId = card.dataset.projectId;
             const project = this.settings.projects.find(p => p.id === projectId);
             if (project) project.name = input.value;
@@ -3516,7 +3589,7 @@
 
           // 项目地址
           if (input.dataset.addressIndex !== undefined) {
-            const card = input.closest("[data-project-id]");
+            const card = input.closest(".liems-card");
             const projectId = card.dataset.projectId;
             const project = this.settings.projects.find(p => p.id === projectId);
             if (project) project.addresses[parseInt(input.dataset.addressIndex)] = input.value;
@@ -3524,7 +3597,7 @@
 
           // 项目认证
           if (input.dataset.authField) {
-            const card = input.closest("[data-project-id]");
+            const card = input.closest(".liems-card");
             const projectId = card.dataset.projectId;
             const project = this.settings.projects.find(p => p.id === projectId);
             if (project) {
@@ -3540,7 +3613,7 @@
 
           // 分类名称
           if (input.dataset.categoryField) {
-            const card = input.closest("[data-category-id]");
+            const card = input.closest(".liems-card");
             const categoryId = card.dataset.categoryId;
             const category = this.settings.platform.menuCategories.find(c => c.id === categoryId);
             if (category) category[input.dataset.categoryField] = input.value;
@@ -3548,9 +3621,9 @@
 
           // 菜单项
           if (input.dataset.itemField) {
-            const row = input.closest("[data-item-id]");
+            const row = input.closest(".liems-form-row");
             const itemId = row.dataset.itemId;
-            const card = input.closest("[data-category-id]");
+            const card = input.closest(".liems-card");
             const categoryId = card.dataset.categoryId;
             const category = this.settings.platform.menuCategories.find(c => c.id === categoryId);
             if (category) {
@@ -3648,7 +3721,7 @@
           const draggedId = e.dataTransfer.getData("text/plain");
           if (!draggedId || draggedId === targetRow.dataset.itemId) return;
 
-          const card = targetRow.closest("[data-category-id]");
+          const card = targetRow.closest(".liems-card");
           const categoryId = card.dataset.categoryId;
           const category = this.settings.platform.menuCategories.find(c => c.id === categoryId);
           if (!category) return;
