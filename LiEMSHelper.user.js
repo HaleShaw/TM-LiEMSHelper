@@ -1888,6 +1888,103 @@
       margin-bottom: 16px;
     }
 
+    .liems-project-header {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      min-height: 36px;
+    }
+
+    .liems-project-header .liems-delete-btn {
+      margin-left: auto;
+      flex-shrink: 0;
+    }
+
+    .liems-collapse-btn {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 24px;
+      height: 24px;
+      background: transparent;
+      border: 1px solid #e2e4e8;
+      border-radius: 4px;
+      color: #6b7280;
+      cursor: pointer;
+      transition: all 0.2s;
+      flex-shrink: 0;
+      padding: 0;
+    }
+
+    .liems-collapse-btn:hover {
+      background: #f3f4f6;
+      border-color: rgb(72, 128, 255);
+      color: rgb(72, 128, 255);
+    }
+
+    .liems-collapse-btn svg {
+      width: 14px;
+      height: 14px;
+      transition: transform 0.2s;
+    }
+
+    .liems-collapse-btn.collapsed svg {
+      transform: rotate(-90deg);
+    }
+
+    .liems-project-name {
+      flex: 1;
+      font-size: 14px;
+      font-weight: 600;
+      color: rgb(72, 128, 255);
+    }
+
+    .liems-project-name-input {
+      height: 36px;
+      min-width: 200px;
+      flex: 1;
+      padding: 0 12px;
+      background: #fafbfc;
+      border: 1px solid #e2e4e8;
+      border-radius: 6px;
+      color: #1a1a2e;
+      font-size: 14px;
+      outline: none;
+      transition: all 0.2s;
+    }
+
+    .liems-project-name-input:focus {
+      border-color: rgb(72, 128, 255);
+      box-shadow: 0 0 0 2px rgba(72, 128, 255, 0.2);
+      background: #ffffff;
+    }
+
+    .liems-project-name-input::placeholder {
+      color: #9ca3af;
+      font-weight: 400;
+    }
+
+    .liems-project-name-input.error {
+      border-color: #ef4444;
+    }
+
+    .liems-project-name-input.error:focus {
+      border-color: #ef4444;
+      box-shadow: 0 0 0 2px rgba(239, 68, 68, 0.2);
+    }
+
+    .liems-project-content {
+      overflow: hidden;
+      transition: max-height 0.3s ease, opacity 0.3s ease;
+      max-height: 1000px;
+      opacity: 1;
+    }
+
+    .liems-project-content.collapsed {
+      max-height: 0;
+      opacity: 0;
+    }
+
     .liems-form-address,
     .liems-form-row {
       display: flex;
@@ -1901,6 +1998,29 @@
       flex-direction: column;
       gap: 6px;
       margin-bottom: 16px;
+    }
+
+    .liems-form-group-last {
+      margin-bottom: 0;
+    }
+
+    .liems-form-row-last {
+      margin-bottom: 0;
+    }
+
+    .liems-project-header {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      min-height: 36px;
+    }
+
+    .liems-card:not(.liems-project-expanded) .liems-project-header {
+      margin-bottom: 0;
+    }
+
+    .liems-card.liems-project-expanded .liems-project-header {
+      margin-bottom: 12px;
     }
 
     .liems-label {
@@ -2411,6 +2531,10 @@
       plus: '<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4" /></svg>',
       minus:
         '<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M20 12H4" /></svg>',
+      chevronDown:
+        '<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7" /></svg>',
+      chevronRight:
+        '<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7" /></svg>',
       download:
         '<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>',
       upload:
@@ -2754,8 +2878,13 @@
       validateSettings() {
         const errors = [];
 
-        // 验证 LiEMS 项目认证信息
+        // 验证 LiEMS 项目配置
         this.settings.projects.forEach((project, pIndex) => {
+          // 验证项目名称
+          if (!project.name.trim()) {
+            errors.push({ type: "project", project: pIndex, field: "name" });
+          }
+          // 验证认证信息
           project.auths.forEach((auth, aIndex) => {
             if (!auth.display.trim()) {
               errors.push({ type: "auth", project: pIndex, auth: aIndex, field: "display" });
@@ -2770,12 +2899,15 @@
         });
 
         // 验证运营管理平台菜单
-        this.settings.platform.address.trim() ||
+        if (!this.settings.platform.address.trim()) {
           errors.push({ type: "platform", field: "address" });
-        this.settings.platform.account.trim() ||
+        }
+        if (!this.settings.platform.account.trim()) {
           errors.push({ type: "platform", field: "account" });
-        this.settings.platform.password.trim() ||
+        }
+        if (!this.settings.platform.password.trim()) {
           errors.push({ type: "platform", field: "password" });
+        }
         this.settings.platform.menuCategories.forEach((category, cIndex) => {
           category.items.forEach((item, iIndex) => {
             if (!item.menuName.trim()) {
@@ -2793,13 +2925,26 @@
       // 高亮错误字段
       highlightErrors(errors) {
         // 清除所有错误样式
-        this.overlay.querySelectorAll(".liems-input.error").forEach(el => {
+        this.overlay.querySelectorAll(".error").forEach(el => {
           el.classList.remove("error");
         });
 
         errors.forEach(err => {
-          if (err.type === "auth") {
-            const projectCard = this.overlay.querySelectorAll("[data-project-id]")[err.project];
+          if (err.type === "project") {
+            const projectCard = this.overlay.querySelectorAll(".liems-card[data-project-id]")[err.project];
+            if (projectCard) {
+              // 如果项目是折叠的，先展开
+              const collapseBtn = projectCard.querySelector(".liems-collapse-btn");
+              const content = projectCard.querySelector(".liems-project-content");
+              if (collapseBtn && content && collapseBtn.classList.contains("collapsed")) {
+                collapseBtn.classList.remove("collapsed");
+                content.classList.remove("collapsed");
+              }
+              const input = projectCard.querySelector(`[data-field="${err.field}"]`);
+              if (input) input.classList.add("error");
+            }
+          } else if (err.type === "auth") {
+            const projectCard = this.overlay.querySelectorAll(".liems-card[data-project-id]")[err.project];
             if (projectCard) {
               const authRow = projectCard.querySelectorAll(".liems-form-row")[err.auth];
               if (authRow) {
@@ -2957,62 +3102,64 @@
           .map(
             (project, pIndex) => `
           <div class="liems-card" data-project-id="${project.id}">
-            <div style="display:flex;justify-content:space-between;margin-bottom:16px">
-              <div class="liems-form-group" style="flex:1;margin-bottom:0">
-                <label class="liems-label liems-label-required">项目名称</label>
-                <input type="text" class="liems-input" value="${project.name}" data-field="name" placeholder="请输入项目名称" />
-              </div>
-              <button class="liems-delete-btn" data-action="remove-project" data-project-id="${project.id}" style="margin-left:16px;margin-top:20px">
-                ${SettingsModule.icons.minus} 删除项目
+            <div class="liems-project-header">
+              <button class="liems-collapse-btn collapsed" data-action="collapse-project" data-project-id="${project.id}">
+                ${SettingsModule.icons.chevronDown}
+              </button>
+              <input type="text" class="liems-project-name-input" value="${project.name}" data-field="name" placeholder="请输入项目名称 *" />
+              <button class="liems-delete-btn" data-action="remove-project" data-project-id="${project.id}">
+                ${SettingsModule.icons.minus} 删除
               </button>
             </div>
 
-            <div class="liems-form-group">
-              <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
-                <label class="liems-label liems-label-required">服务器地址</label>
-                <button class="liems-add-link" data-action="add-address" data-project-id="${project.id}">${SettingsModule.icons.plus} 添加地址</button>
-              </div>
-              ${project.addresses
-                .map(
-                  (addr, aIndex) => `
-                <div class="liems-form-address">
-                  <input type="text" class="liems-input liems-input-flex" value="${addr}" data-address-index="${aIndex}" placeholder="http://example.com:port" />
-                  ${
-                    project.addresses.length > 1 ?
-                      `
-                    <button class="liems-icon-btn danger" data-action="remove-address" data-project-id="${project.id}" data-address-index="${aIndex}">${SettingsModule.icons.minus}</button>
-                  `
-                    : ""
-                  }
+            <div class="liems-project-content collapsed">
+              <div class="liems-form-group">
+                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+                  <label class="liems-label liems-label-required">服务器地址</label>
+                  <button class="liems-add-link" data-action="add-address" data-project-id="${project.id}">${SettingsModule.icons.plus} 添加地址</button>
                 </div>
-              `
-                )
-                .join("")}
-            </div>
+                ${project.addresses
+                  .map(
+                    (addr, aIndex) => `
+                  <div class="liems-form-address">
+                    <input type="text" class="liems-input liems-input-flex" value="${addr}" data-address-index="${aIndex}" placeholder="http://example.com:port" />
+                    ${
+                      project.addresses.length > 1 ?
+                        `
+                      <button class="liems-icon-btn danger" data-action="remove-address" data-project-id="${project.id}" data-address-index="${aIndex}">${SettingsModule.icons.minus}</button>
+                    `
+                        : ""
+                    }
+                  </div>
+                `
+                  )
+                  .join("")}
+              </div>
 
-            <div class="liems-form-group">
-              <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
-                <label class="liems-label liems-label-required">认证信息</label>
-                <button class="liems-add-link" data-action="add-auth" data-project-id="${project.id}">${SettingsModule.icons.plus} 添加认证</button>
-              </div>
-              ${project.auths
-                .map(
-                  (auth, authIndex) => `
-                <div class="liems-form-row">
-                  <input type="text" class="liems-input liems-input-sm" value="${auth.display}" data-auth-index="${authIndex}" data-auth-field="display" placeholder="显示名称 *"/>
-                  <input type="text" class="liems-input liems-input-flex" value="${auth.account}" data-auth-index="${authIndex}" data-auth-field="account" placeholder="账号 *"/>
-                  <input type="password" class="liems-input liems-input-flex" value="${auth.password}" data-auth-index="${authIndex}" data-auth-field="password" placeholder="密码 *"/>
-                  ${
-                    project.auths.length > 1 ?
-                      `
-                    <button class="liems-icon-btn danger" data-action="remove-auth" data-project-id="${project.id}" data-auth-index="${authIndex}">${SettingsModule.icons.minus}</button>
-                  `
-                    : ""
-                  }
+              <div class="liems-form-group liems-form-group-last">
+                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+                  <label class="liems-label liems-label-required">认证信息</label>
+                  <button class="liems-add-link" data-action="add-auth" data-project-id="${project.id}">${SettingsModule.icons.plus} 添加认证</button>
                 </div>
-              `
-                )
-                .join("")}
+                ${project.auths
+                  .map(
+                    (auth, authIndex) => `
+                  <div class="liems-form-row ${authIndex === project.auths.length - 1 ? 'liems-form-row-last' : ''}">
+                    <input type="text" class="liems-input liems-input-sm" value="${auth.display}" data-auth-index="${authIndex}" data-auth-field="display" placeholder="显示名称 *"/>
+                    <input type="text" class="liems-input liems-input-flex" value="${auth.account}" data-auth-index="${authIndex}" data-auth-field="account" placeholder="账号 *"/>
+                    <input type="password" class="liems-input liems-input-flex" value="${auth.password}" data-auth-index="${authIndex}" data-auth-field="password" placeholder="密码 *"/>
+                    ${
+                      project.auths.length > 1 ?
+                        `
+                      <button class="liems-icon-btn danger" data-action="remove-auth" data-project-id="${project.id}" data-auth-index="${authIndex}">${SettingsModule.icons.minus}</button>
+                    `
+                        : ""
+                    }
+                  </div>
+                `
+                  )
+                  .join("")}
+              </div>
             </div>
           </div>
         `
@@ -3297,6 +3444,9 @@
             case "remove-project":
               this.removeProject(target.dataset.projectId);
               break;
+            case "collapse-project":
+              this.toggleProjectCollapse(target);
+              break;
             case "add-address":
               this.addAddress(target.dataset.projectId);
               break;
@@ -3535,6 +3685,21 @@
           auths: [{ display: "", account: "", password: "" }],
         });
         this.renderActiveTab();
+        // 新添加的项目默认展开
+        this.expandLastProject();
+      }
+
+      expandLastProject() {
+        const cards = this.overlay.querySelectorAll(".liems-card[data-project-id]");
+        if (cards.length === 0) return;
+        const lastCard = cards[cards.length - 1];
+        const btn = lastCard.querySelector(".liems-collapse-btn");
+        const content = lastCard.querySelector(".liems-project-content");
+        if (btn && content) {
+          btn.classList.remove("collapsed");
+          content.classList.remove("collapsed");
+          lastCard.classList.add("liems-project-expanded");
+        }
       }
 
       removeProject(projectId) {
@@ -3542,11 +3707,29 @@
         this.renderActiveTab();
       }
 
+      toggleProjectCollapse(btn) {
+        const card = btn.closest(".liems-card");
+        const content = card.querySelector(".liems-project-content");
+        if (!content) return;
+
+        const isCollapsed = btn.classList.contains("collapsed");
+        if (isCollapsed) {
+          btn.classList.remove("collapsed");
+          content.classList.remove("collapsed");
+          card.classList.add("liems-project-expanded");
+        } else {
+          btn.classList.add("collapsed");
+          content.classList.add("collapsed");
+          card.classList.remove("liems-project-expanded");
+        }
+      }
+
       addAddress(projectId) {
         const project = this.settings.projects.find(p => p.id === projectId);
         if (project) {
           project.addresses.push("");
           this.renderActiveTab();
+          this.expandProject(projectId);
         }
       }
 
@@ -3555,6 +3738,7 @@
         if (project) {
           project.addresses.splice(index, 1);
           this.renderActiveTab();
+          this.expandProject(projectId);
         }
       }
 
@@ -3563,6 +3747,7 @@
         if (project) {
           project.auths.push({ display: "", account: "", password: "" });
           this.renderActiveTab();
+          this.expandProject(projectId);
         }
       }
 
@@ -3571,6 +3756,20 @@
         if (project) {
           project.auths.splice(index, 1);
           this.renderActiveTab();
+          this.expandProject(projectId);
+        }
+      }
+
+      // 展开指定的项目
+      expandProject(projectId) {
+        const card = this.overlay.querySelector(`.liems-card[data-project-id="${projectId}"]`);
+        if (!card) return;
+        const btn = card.querySelector(".liems-collapse-btn");
+        const content = card.querySelector(".liems-project-content");
+        if (btn && content) {
+          btn.classList.remove("collapsed");
+          content.classList.remove("collapsed");
+          card.classList.add("liems-project-expanded");
         }
       }
 
