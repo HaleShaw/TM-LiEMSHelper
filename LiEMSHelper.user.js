@@ -645,6 +645,9 @@
   // 在线用户数据
   let onlineUsersData = [];
 
+  // 当前LiEMS版本
+  let currentVersion = "";
+
   // ====================== 3. 工具模块 ======================
   const Toolkit = {
     /**
@@ -955,9 +958,9 @@
      * @returns {boolean} 如果当前版本大于目标版本返回true，否则返回false
      */
     checkLiEMSVersion: function () {
-      let versionStrArr = lui.version.split(".");
-      let currentVersion = versionStrArr[versionStrArr.length - 1].substring(0, 8);
-      return currentVersion > Constants.LIEMS_VERSION_MIN && currentVersion < Constants.LIEMS_VERSION_MAX;
+      let versionStrArr = lui.session.getGlobal("pushVersion").split(".");
+      currentVersion = versionStrArr[versionStrArr.length - 1];
+      return new Number(versionStrArr[0]) >= 8 && currentVersion > Constants.LIEMS_VERSION_MIN;
     },
 
     /**
@@ -1142,9 +1145,13 @@
       lui.ajax(lui.url.userOnlineList, params, function (result) {
         try {
           result = lui.utils.unzip(result);
-          const res = result.data.callbackData;
-          const data = res.list || [];
-
+          let data = [];
+          if (currentVersion < Constants.LIEMS_VERSION_MAX) {
+            const res = result.data.callbackData;
+            data = res.list || [];
+          } else {
+            data = result.list;
+          }
           // 对数据按usrId进行去重
           onlineUsersData = Array.from(new Map(data.map(user => [user.usrId, user])).values()).map(
             user => ({
@@ -1207,6 +1214,9 @@
     createUserRequest: function (user) {
       return new Promise((resolve, reject) => {
         lui.ajax(lui.url.usrOnlineInfo, { usrChartId: user.usrChartId }, res => {
+          if (currentVersion >= Constants.LIEMS_VERSION_MAX) {
+            res = lui.utils.unzip(res);
+          }
           res ?
             (res.lgnIp === "0:0:0:0:0:0:0:1" && (res.lgnIp = window.location.hostname),
             (res.lgnType = res.lgnType.toLowerCase()),
