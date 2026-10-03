@@ -86,7 +86,8 @@
     MAX_DISPLAY_RESULTS: 20,
 
     // LiEMS版本阈值
-    LIEMS_VERSION_THRESHOLD: "20241223",
+    LIEMS_VERSION_MIN: "20241223",
+    LIEMS_VERSION_MAX: "20260528",
 
     SNIPPETS: {
       LiEMSMainStyle: `
@@ -956,7 +957,7 @@
     checkLiEMSVersion: function () {
       let versionStrArr = lui.version.split(".");
       let currentVersion = versionStrArr[versionStrArr.length - 1].substring(0, 8);
-      return currentVersion > Constants.LIEMS_VERSION_THRESHOLD;
+      return currentVersion > Constants.LIEMS_VERSION_MIN && currentVersion < Constants.LIEMS_VERSION_MAX;
     },
 
     /**
@@ -1520,13 +1521,17 @@
           }
           // 调用后台方法清除所有缓存
           const clearCacheSuccess = function () {
-            lui.message.success("缓存清除成功，刷新页面");
-            const tabId = activeClassName.replace("tab-", "");
-            const iframe = document.querySelector(`iframe[tabid=${tabId}]`);
-            if (iframe) {
-              iframe.contentDocument.location.reload();
+            window.top.lui.message.success("缓存清除成功，刷新页面");
+            if (window === window.top) {
+              const activeClassName = Toolkit.getClassNameOfActiveTab();
+              if (activeClassName) {
+                const tabId = activeClassName.replace("tab-", "");
+                const iframe = document.querySelector(`iframe[tabid=${tabId}]`);
+                iframe?.contentDocument.location.reload();
+              }
+            } else {
+              window.document.location.reload();
             }
-            Toolkit.activeTabByClassName(activeClassName);
           };
           const clearCacheError = function (data) {
             console.error("清除缓存失败:", data);
@@ -1534,12 +1539,6 @@
             console.log(
               "Liems\\WEB-INF\\classes\\net\\luculent\\liems\\web\\cp\\CommonUtils.class"
             );
-            const tabId = activeClassName.replace("tab-", "");
-            const iframe = document.querySelector(`iframe[tabid=${tabId}]`);
-            if (iframe) {
-              iframe.contentDocument.location.reload();
-            }
-            Toolkit.activeTabByClassName(activeClassName);
           };
           lui.ajax("CommonUtils@clearAllCaches", {}, clearCacheSuccess, clearCacheError);
           return;
