@@ -378,21 +378,48 @@
     }
     `,
       LuculentExamStyle: `
-    .btn-copy-exam {
-      margin-left: 8px;
-      height: 40px;
-      line-height: 40px;
-      border: 1px #ccc solid;
-      border-radius: 5px;
-      color: #3464e0;
-      font-size: 16px;
+    .btn-copy-exam, .btn-view-answer {
+      margin-left: 10px;
+      height: 36px;
+      padding: 0 20px;
+      line-height: 36px;
+      border: none;
+      border-radius: 18px;
+      font-size: 14px;
       cursor: pointer;
-      font-weight: bold;
-      }
+      transition: all 0.2s ease;
+    }
+
+    .btn-copy-exam {
+      background: linear-gradient(135deg, #5a9cf8 0%, #3464e0 100%);
+      color: #fff;
+      box-shadow: 0 2px 8px rgba(52, 100, 224, 0.3);
+    }
 
     .btn-copy-exam:hover {
+      background: linear-gradient(135deg, #6aacff 0%, #4474f0 100%);
+      box-shadow: 0 4px 12px rgba(52, 100, 224, 0.4);
+      transform: translateY(-1px);
+    }
+
+    .btn-view-answer {
+      background: linear-gradient(135deg, #52c41a 0%, #389e0d 100%);
       color: #fff;
-      background-color: #3464e0;
+      box-shadow: 0 2px 8px rgba(56, 158, 13, 0.3);
+    }
+
+    .btn-view-answer:hover:not(:disabled) {
+      background: linear-gradient(135deg, #73d13d 0%, #52b026 100%);
+      box-shadow: 0 4px 12px rgba(56, 158, 13, 0.4);
+      transform: translateY(-1px);
+    }
+
+    .btn-view-answer:disabled {
+      background: linear-gradient(135deg, #d9d9d9 0%, #bfbfbf 100%);
+      color: #999;
+      cursor: not-allowed;
+      box-shadow: none;
+      transform: none;
     }
 
     .tm-content {
@@ -402,6 +429,125 @@
     .tm-content:hover {
       background-color: #f5f5f5;
       color: #3464e0;
+    }
+
+    .answer-float-panel {
+      position: fixed;
+      top: 80px;
+      right: 0;
+      width: 435px;
+      max-height: calc(100vh - 160px);
+      background-color: #fff;
+      box-shadow: -2px 0 10px rgba(0,0,0,0.2);
+      z-index: 99999;
+      display: flex;
+      flex-direction: column;
+      transform: translateX(100%);
+      transition: transform 0.3s ease;
+      border-radius: 8px 0 0 8px;
+    }
+
+    .answer-float-panel.show {
+      transform: translateX(0);
+    }
+
+    .answer-panel-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 15px 20px;
+      background-color: #3464e0;
+      color: #fff;
+      font-size: 16px;
+      font-weight: bold;
+    }
+
+    .answer-panel-close {
+      width: 30px;
+      height: 30px;
+      border: none;
+      background: rgba(255,255,255,0.2);
+      color: #fff;
+      font-size: 20px;
+      cursor: pointer;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      line-height: 1;
+    }
+
+    .answer-panel-close:hover {
+      background: rgba(255,255,255,0.3);
+    }
+
+    .answer-panel-content {
+      flex: 1;
+      overflow-y: auto;
+      padding: 15px;
+    }
+
+    .answer-item {
+      display: inline-block;
+      padding: 5px 10px;
+      margin: 3px;
+      background-color: #f0f5ff;
+      border-radius: 4px;
+      font-size: 13px;
+      min-width: 50px;
+      text-align: center;
+      border: 1px solid #d0daf7;
+    }
+
+    .answer-item.long-answer {
+      display: block;
+      width: calc(100% - 31px);
+      text-align: left;
+    }
+
+    .answer-item.first-question {
+      background-color: #fff3e0;
+      border: 1px solid #ffb74d;
+      margin-bottom: 15px;
+    }
+
+    .answer-item.first-question .answer-item-title {
+      color: #e65100;
+      font-size: 14px;
+    }
+
+    .answer-item:hover {
+      background-color: #e0ebff;
+    }
+
+    .answer-item-title {
+      color: #666;
+      font-size: 12px;
+    }
+
+    .answer-item-answer {
+      color: #3464e0;
+      font-weight: bold;
+    }
+
+    .answer-panel-loading {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 200px;
+      color: #666;
+    }
+
+    .answer-panel-empty {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 200px;
+      color: #999;
+    }
+
+    .sj-title-2 {
+      width: 780px !important;
     }`,
       LuculentTaskStyle: `
     /* 我的待办 */
@@ -4105,6 +4251,7 @@
       Toolkit.addStyle(Constants.SNIPPETS.LuculentExamStyle);
       PlatformModule.copyExamContent();
       PlatformModule.copyExamTitle();
+      PlatformModule.viewExamAnswer();
     },
 
     /**
@@ -4113,7 +4260,7 @@
     copyExamContent: function () {
       Toolkit.waitForElement(".sj-title", element => {
         let copyBtn = document.createElement("button");
-        copyBtn.textContent = "复制试卷内容";
+        copyBtn.textContent = "复制试卷";
         copyBtn.setAttribute("title", "点击复制试卷全部内容");
         copyBtn.className = "btn-copy-exam";
         copyBtn.addEventListener("click", function () {
@@ -4123,7 +4270,171 @@
           layer.msg("试卷内容复制成功");
         });
         element.appendChild(copyBtn);
+
+        let viewAnswerBtn = document.createElement("button");
+        viewAnswerBtn.textContent = "查看答案";
+        viewAnswerBtn.setAttribute("title", "点击查看试卷答案");
+        viewAnswerBtn.className = "btn-view-answer";
+        viewAnswerBtn.id = "btn-view-answer";
+        viewAnswerBtn.addEventListener("click", function () {
+          const panel = document.getElementById("answer-float-panel");
+          if (panel && panel.classList.contains("show")) {
+            PlatformModule.hideAnswerPanel();
+          } else {
+            PlatformModule.showAnswerPanel();
+          }
+        });
+        element.appendChild(viewAnswerBtn);
       });
+    },
+
+    /**
+     * 查看考试答案功能初始化
+     */
+    viewExamAnswer: function () {
+      // 创建浮窗容器（如果不存在）
+      if (!document.getElementById("answer-float-panel")) {
+        const panel = document.createElement("div");
+        panel.id = "answer-float-panel";
+        panel.className = "answer-float-panel";
+        panel.innerHTML = `
+          <div class="answer-panel-header">
+            <span>答案</span>
+            <button class="answer-panel-close" id="answer-panel-close-btn">&times;</button>
+          </div>
+          <div class="answer-panel-content" id="answer-panel-content">
+            <div class="answer-panel-empty">点击按钮获取答案</div>
+          </div>
+        `;
+        document.body.appendChild(panel);
+
+        // 绑定关闭按钮事件
+        document.getElementById("answer-panel-close-btn").addEventListener("click", function () {
+          PlatformModule.hideAnswerPanel();
+        });
+      }
+    },
+
+    /**
+     * 显示答案浮窗
+     */
+    showAnswerPanel: function () {
+      const panel = document.getElementById("answer-float-panel");
+      const viewAnswerBtn = document.getElementById("btn-view-answer");
+      const content = document.getElementById("answer-panel-content");
+
+      if (panel && viewAnswerBtn && content) {
+        viewAnswerBtn.textContent = "关闭答案";
+        panel.classList.add("show");
+
+        // 如果还没有加载过答案，则获取答案
+        if (!content.dataset.loaded) {
+          PlatformModule.fetchExamAnswer(function (answers) {
+            PlatformModule.renderAnswerContent(answers);
+          });
+        }
+      }
+    },
+
+    /**
+     * 隐藏答案浮窗
+     */
+    hideAnswerPanel: function () {
+      const panel = document.getElementById("answer-float-panel");
+      const viewAnswerBtn = document.getElementById("btn-view-answer");
+
+      if (panel && viewAnswerBtn) {
+        panel.classList.remove("show");
+        viewAnswerBtn.textContent = "查看答案";
+      }
+    },
+
+    /**
+     * 获取考试答案
+     * @param {Function} callback - 获取成功后的回调函数
+     */
+    fetchExamAnswer: function (callback) {
+      const content = document.getElementById("answer-panel-content");
+      if (!content) return;
+
+      content.innerHTML = '<div class="answer-panel-loading">加载中...</div>';
+
+      const pArray = examInfo.split("@");
+
+      // 使用 fetch API 调用后台接口
+      const params = new URLSearchParams({
+        method: "getPaperAnswer",
+        examState: pArray[0] || "",
+        khNo: pArray[1] || "",
+        zjNo: pArray[2] || "",
+        kcNo: pArray[3] || "",
+        ksId: pArray[4] || "",
+        userId: userInfo.actsht || "",
+        orgNo: userInfo.zzno || "",
+        lx: pArray[5] || ""
+      });
+
+      fetch(basePath + "xyWebSiteServlet?" + params.toString(), {
+        method: "GET",
+        credentials: "include"
+      })
+        .then(function (response) {
+          return response.json();
+        })
+        .then(function (result) {
+          if (result && result.data && result.data.length > 0) {
+            content.dataset.loaded = "true";
+            callback(result.data);
+          } else {
+            content.innerHTML = '<div class="answer-panel-empty">暂无答案数据</div>';
+          }
+        })
+        .catch(function (error) {
+          console.error("获取答案失败:", error);
+          content.innerHTML = '<div class="answer-panel-empty">获取答案失败，请重试</div>';
+        });
+    },
+
+    /**
+     * 渲染答案内容
+     * @param {Array} answers - 答案数据数组
+     */
+    renderAnswerContent: function (answers) {
+      const content = document.getElementById("answer-panel-content");
+      if (!content) return;
+
+      const questionTitles = document.querySelectorAll(".tm-content");
+      let html = "";
+
+      // 获取第1题的题目，显示在最前面
+      if (questionTitles[0]) {
+        const p = questionTitles[0].querySelector("p");
+        let firstQuestionTitle = p ? p.textContent : questionTitles[0].textContent;
+        if (firstQuestionTitle.length > 80) {
+          firstQuestionTitle = firstQuestionTitle.substring(0, 80) + "...";
+        }
+        html += `
+          <div class="answer-item first-question long-answer">
+            <div class="answer-item-title">第1题：${firstQuestionTitle}</div>
+          </div>
+        `;
+      }
+
+      // 显示所有答案
+      answers.forEach(function (item, index) {
+        const questionNum = index + 1;
+        const answer = item.tmDa || "暂无";
+        // 答案长度超过3个字符视为长答案（如多选题的"A,B,C"格式）
+        const isLongAnswer = answer.length > 3;
+        html += `
+          <div class="answer-item${isLongAnswer ? ' long-answer' : ''}">
+            <div class="answer-item-title">${questionNum}</div>
+            <div class="answer-item-answer">${answer}</div>
+          </div>
+        `;
+      });
+
+      content.innerHTML = html || '<div class="answer-panel-empty">暂无答案数据</div>';
     },
 
     /**
