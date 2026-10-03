@@ -1510,7 +1510,7 @@
         }
 
         // Shift + F4
-        // 强制刷新当前标签（先刷新系统XML缓存）
+        // 强制刷新当前标签（先清除系统缓存）
         if (keyCode == 115 && !ctrlKey && !altKey && shiftKey) {
           e.preventDefault();
           e.stopPropagation();
@@ -1518,64 +1518,30 @@
           if (!activeClassName) {
             return;
           }
-          const cachePgmId = "B7STS00423";
-          lui.page.open(cachePgmId);
-          let loaded;
-          let cacheIframe;
-          let selectBtn;
-          let closeCache;
-          let i = 0;
-          let interval = setInterval(() => {
-            i++;
-            if (loaded || i > 250) {
-              clearInterval(interval);
-              if (loaded) {
-                selectBtn.click();
-                setTimeout(() => {
-                  const selectAllBtn = cacheIframe.contentWindow.document.querySelectorAll(
-                    "ul.ivu-dropdown-menu > li.ivu-dropdown-item"
-                  )[2];
-                  if (selectAllBtn) {
-                    selectAllBtn.click();
-                    setTimeout(() => {
-                      var cacheNoArr = cacheIframe.contentWindow.lui.grid
-                        .get("DKCACHEMST")
-                        .getStandbyPkArr();
-                      if (!lui.utils.isEmpty(cacheNoArr)) {
-                        cacheIframe.contentWindow.lui.service("refreshCache", { no: cacheNoArr });
-                        closeCache = true;
-                      }
-                    }, 1500);
-                    setTimeout(() => {
-                      if (closeCache) {
-                        cacheIframe.contentWindow.lui.page.close();
-                      }
-
-                      const tabId = activeClassName.replace("tab-", "");
-                      const iframe = document.querySelector(`iframe[tabid=${tabId}]`);
-                      if (iframe) {
-                        iframe.contentDocument.location.reload();
-                      }
-                      Toolkit.activeTabByClassName(activeClassName);
-                    }, 3500);
-                  }
-                }, 500);
-              } else {
-                window.top.lui.message.warning("“缓存管理”程序启动失败，请重试！");
-                console.log("加载超时！");
-              }
-            } else {
-              cacheIframe = window.top.document.querySelector(`iframe[pgmid=${cachePgmId}]`);
-              if (cacheIframe && cacheIframe.contentWindow) {
-                selectBtn = cacheIframe.contentWindow.document.querySelector(
-                  "button.c-gfoot-check-item"
-                );
-                if (selectBtn) {
-                  loaded = true;
-                }
-              }
+          // 调用后台方法清除所有缓存
+          const clearCacheSuccess = function () {
+            lui.message.success("缓存清除成功，刷新页面");
+            const tabId = activeClassName.replace("tab-", "");
+            const iframe = document.querySelector(`iframe[tabid=${tabId}]`);
+            if (iframe) {
+              iframe.contentDocument.location.reload();
             }
-          }, 100);
+            Toolkit.activeTabByClassName(activeClassName);
+          };
+          const clearCacheError = function (data) {
+            console.error("清除缓存失败:", data);
+            console.log("如果清除缓存失败，请检查是否有部署class文件。");
+            console.log(
+              "Liems\\WEB-INF\\classes\\net\\luculent\\liems\\web\\cp\\CommonUtils.class"
+            );
+            const tabId = activeClassName.replace("tab-", "");
+            const iframe = document.querySelector(`iframe[tabid=${tabId}]`);
+            if (iframe) {
+              iframe.contentDocument.location.reload();
+            }
+            Toolkit.activeTabByClassName(activeClassName);
+          };
+          lui.ajax("CommonUtils@clearAllCaches", {}, clearCacheSuccess, clearCacheError);
           return;
         }
 
@@ -3606,6 +3572,7 @@
               <li class="liems-feature-item"><span class="liems-feature-dot"></span> 运营管理平台任务列表显示优化</li>
               <li class="liems-feature-item"><span class="liems-feature-dot"></span> 运营管理平台自动登录</li>
               <li class="liems-feature-item"><span class="liems-feature-dot"></span> 运营管理平台在线考试复制题目及试卷</li>
+              <li class="liems-feature-item"><span class="liems-feature-dot"></span> 运营管理平台在线考试查看答案</li>
               <li class="liems-feature-item" style="margin-bottom:0"><span class="liems-feature-dot"></span> 配置数据备份与恢复</li>
             </ul>
           </div>
