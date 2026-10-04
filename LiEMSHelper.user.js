@@ -4,7 +4,7 @@
 // @description        LiEMS强化扩展工具
 // @description:en     An enhanced and extended tool for LiEMS.
 // @namespace          https://github.com/HaleShaw
-// @version            1.0.4
+// @version            1.0.5
 // @author             HaleShaw
 // @copyright          2023+, HaleShaw (https://github.com/HaleShaw)
 // @license            AGPL-3.0-or-later
@@ -127,11 +127,12 @@
         <table class="banner-online-wrap">
           <thead>
             <tr>
-              <th title="用户名" class="usr-info name">用户名</th>
-              <th title="公司名" class="usr-info org">公司名</th>
-              <th title="登录地址" class="usr-info address">登录地址</th>
-              <th title="登录时间" class="usr-info time">登录时间</th>
-              <th title="登录终端" class="usr-info terminal">登录终端</th>
+              <th title="用户名" class="usr-info name sortable" data-sort-key="unam">用户名</th>
+              <th title="公司名" class="usr-info org sortable" data-sort-key="orgName">公司名</th>
+              <th title="部门" class="usr-info cstName sortable" data-sort-key="cstName">部门</th>
+              <th title="岗位" class="usr-info posName sortable" data-sort-key="posName">岗位</th>
+              <th title="登录时间" class="usr-info time sortable" data-sort-key="lgnTime">登录时间</th>
+              <th title="登录终端" class="usr-info terminal sortable" data-sort-key="lgnType">登录终端</th>
             </tr>
           </thead>
           <tbody>
@@ -178,6 +179,18 @@
       display: flex;
       align-items: center;
       flex-direction: column;
+      padding-bottom: 0.75em;
+      margin-bottom: 0.25em;
+      border-bottom: 1px solid #f0f1f5;
+    }
+
+    #onlineUsersModal .modalHeader h2 {
+      margin: 0;
+      font-size: 1.1rem;
+      font-weight: 600;
+      letter-spacing: 0.05em;
+      color: #303133;
+      line-height: 1.4;
     }
 
     #onlineUsersModal .modalClose {
@@ -217,11 +230,6 @@
       border-collapse: collapse;
     }
 
-    #onlineUsersModal table head{
-      display: table;
-      table-layout: fixed;
-    }
-
     #onlineUsersModal table tr,
     #onlineUsersModal table th,
     #onlineUsersModal table td {
@@ -233,11 +241,11 @@
       background: #f4f5f9;
     }
 
+    /* tbody 用 block 撑出滚动区；tr 强制 table 以维持列宽 */
     .modalContent tbody {
       display: block;
       max-height: 20rem;
       overflow-y: auto;
-      table-layout: fixed;
     }
 
     /* 隐藏tbody滚动条但保留滚动功能 */
@@ -274,7 +282,11 @@
       width: 20rem;
     }
 
-    .modalContent .usr-info.address {
+    .modalContent .usr-info.cstName {
+      width: 9rem;
+    }
+
+    .modalContent .usr-info.posName {
       width: 9rem;
     }
 
@@ -290,6 +302,56 @@
     .modalContent .usr-info.mobile {
       background: url(../../prod/static/mobile.png) center center no-repeat;
       width: 80px;
+    }
+
+    /* 可排序列头样式 */
+    .modalContent thead th.sortable {
+      cursor: pointer;
+      user-select: none;
+      position: relative;
+      padding-right: 1.25rem !important;
+    }
+
+    .modalContent thead th.sortable:hover {
+      color: #4880ff;
+    }
+
+    .modalContent thead th.sortable::after {
+      content: "";
+      position: absolute;
+      right: 6px;
+      top: 50%;
+      width: 0;
+      height: 0;
+      border-left: 4px solid transparent;
+      border-right: 4px solid transparent;
+      border-top: 5px solid #c0c4cc;
+      transform: translateY(-50%);
+      opacity: 0.5;
+    }
+
+    .modalContent thead th.sort-asc::after {
+      border-top: none;
+      border-bottom: 5px solid #4880ff;
+      opacity: 1;
+    }
+
+    .modalContent thead th.sort-desc::after {
+      border-top: 5px solid #4880ff;
+      opacity: 1;
+    }
+
+    /* 关键字高亮行（部门或岗位命中关键字时统一应用）
+       红色文字 + 加粗 + 淡红背景，三重视觉提示，醒目且不刺眼 */
+    .modalContent tbody tr.row-highlight {
+      background-color: #fff1f0;
+    }
+    .modalContent tbody tr.row-highlight:hover {
+      background-color: #ffdfdf;
+    }
+    .modalContent tbody tr.row-highlight td.cell-highlight {
+      color: #cf1322;
+      font-weight: 700;
     }
     `,
       LiEMSToChatScript: `
@@ -923,44 +985,50 @@
         }
       }
     },
-
-    /**
-     * Active tab by class name.
-     * @param {String} className The class name of the tab to be activated.
-     */
-    activeTabByClassName: function (className) {
-      const tabs = window.top.document.querySelectorAll(".ivu-tabs-nav > .ivu-tabs-tab");
-      for (let tab of tabs) {
-        if (tab.classList.contains(className)) {
-          tab.click();
-          break;
-        }
-      }
-    },
   };
 
   // ====================== 4. 在线用户模块 ======================
   const OnlineUsersModule = {
     /**
+     * 当前用户数据缓存（用于表头排序时复用，避免重复渲染触发原请求）。
+     * 渲染后同步写入，点击表头时基于此缓存排序。
+     */
+    currentUserData: [],
+
+    /**
+     * 当前排序状态：{ key: string, direction: 'asc' | 'desc' }
+     */
+    currentSort: { key: "", direction: "asc" },
+
+    /**
+     * 部门名称中包含以下关键字时，该行做醒目标识（领导相关）。
+     * 匹配规则：contains，区分大小写。
+     */
+    DEPT_HIGHLIGHT_KEYWORDS: ["领导"],
+
+    /**
+     * 岗位名称中包含以下关键字时，该行做醒目标识（高管相关）。
+     * 匹配规则：contains，区分大小写。
+     */
+    POS_HIGHLIGHT_KEYWORDS: ["董事长", "经理", "书记", "副总", "部长"],
+
+    /**
      * 根据LiEMS版本处理在线用户
      */
     handleOnlineUsers: function () {
-      OnlineUsersModule.checkLiEMSVersion() ?
-        Toolkit.waitForElement("div.pane-col > div.banner-left", OnlineUsersModule.addOnlineUsers)
-      : Toolkit.waitForElement(
-          "div.banner-left > div.fl > div.info",
-          OnlineUsersModule.sortOnlineList
-        );
-    },
-
-    /**
-     * 检查当前LiEMS版本是否大于指定的目标版本
-     * @returns {boolean} 如果当前版本大于目标版本返回true，否则返回false
-     */
-    checkLiEMSVersion: function () {
-      let versionStrArr = lui.session.getGlobal("pushVersion").split(".");
+      const versionStrArr = lui.session.getGlobal("pushVersion").split(".");
+      const mainVersion = versionStrArr[0];
       currentVersion = versionStrArr[versionStrArr.length - 1];
-      return new Number(versionStrArr[0]) >= 8 && currentVersion > Constants.LIEMS_VERSION_MIN;
+      // 主版本小于8，不处理
+      if(mainVersion < 8){
+        return;
+      }
+      if(currentVersion <= Constants.LIEMS_VERSION_MIN){
+        // 刷新用户列表
+        Toolkit.waitForElement("div.banner-left > div.fl > div.info", OnlineUsersModule.sortOnlineList);
+      } else {
+        Toolkit.waitForElement("div.pane-col > div.banner-left", OnlineUsersModule.addOnlineUsers);
+      }
     },
 
     /**
@@ -1012,20 +1080,117 @@
     },
 
     /**
-     * 渲染用户表格
-     * @param {HTMLElement} tbody - 表格tbody元素
-     * @param {Array} data - 用户数据
+     * 判断值是否可作为时间比较
      */
-    renderUserTable: function (tbody, data) {
-      if (!data || data.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="5" style="text-align: center;">暂无在线用户</td></tr>';
-        return;
-      }
+    _isDateLike: function (val) {
+      if (typeof val !== "string") return false;
+      // 形如 "2026-10-04 11:46:07"
+      return /^\d{4}-\d{2}-\d{2}( \d{2}:\d{2}:\d{2})?$/.test(val);
+    },
 
+    /**
+     * 对用户数据按指定 key 排序（稳定排序，不修改原数组）。
+     * - 字符串按 localeCompare
+     * - 数字按数值
+     * - 时间字符串按 Date.parse
+     * - 空值始终排在末尾
+     */
+    sortUserData: function (data, key, direction) {
+      const dir = direction === "desc" ? -1 : 1;
+      const isTime = data.length > 0 && this._isDateLike(data[0][key]);
+
+      const getValue = item => {
+        const v = item[key];
+        if (v === undefined || v === null || v === "") return null;
+        if (typeof v === "number") return v;
+        if (isTime) return Date.parse(v.replace(/-/g, "/"));
+        return String(v);
+      };
+
+      const indexed = data.map((item, idx) => ({ item, idx, val: getValue(item) }));
+      indexed.sort((a, b) => {
+        // 空值始终置底
+        if (a.val === null && b.val === null) return a.idx - b.idx;
+        if (a.val === null) return 1;
+        if (b.val === null) return -1;
+        if (a.val < b.val) return -1 * dir;
+        if (a.val > b.val) return 1 * dir;
+        return a.idx - b.idx;
+      });
+
+      return indexed.map(x => x.item);
+    },
+
+    /**
+     * 处理表头点击：根据 data-sort-key 切换排序方向并重渲染表格。
+     * 仅绑定一次（通过 marker class 防止重复监听）。
+     */
+    handleSortHeaderClick: function (tbody, event) {
+      const th = event.target.closest("th.sortable");
+      if (!th) return;
+
+      const key = th.dataset.sortKey;
+      if (!key) return;
+
+      const thead = tbody.previousElementSibling;
+      // 清除所有 th 的排序样式
+      thead.querySelectorAll("th.sortable").forEach(el => {
+        el.classList.remove("sort-asc", "sort-desc");
+      });
+
+      let direction = "asc";
+      if (OnlineUsersModule.currentSort.key === key) {
+        direction = OnlineUsersModule.currentSort.direction === "asc" ? "desc" : "asc";
+      }
+      OnlineUsersModule.currentSort = { key, direction };
+
+      th.classList.add(direction === "asc" ? "sort-asc" : "sort-desc");
+
+      // 基于缓存排序后重渲染
+      const sorted = OnlineUsersModule.sortUserData(
+        OnlineUsersModule.currentUserData,
+        key,
+        direction
+      );
+      OnlineUsersModule._renderRows(tbody, sorted);
+    },
+
+    /**
+     * 绑定表头排序事件（幂等）。
+     */
+    bindSortHandlers: function (tbody) {
+      const thead = tbody.previousElementSibling;
+      if (!thead || thead.dataset.sortBound === "1") return;
+      thead.dataset.sortBound = "1";
+      thead.addEventListener("click", e => OnlineUsersModule.handleSortHeaderClick(tbody, e));
+    },
+
+    /**
+     * 判断字符串中是否包含任一关键字
+     */
+    _containsAnyKeyword: function (text, keywords) {
+      if (!text || !Array.isArray(keywords) || keywords.length === 0) return false;
+      const haystack = String(text);
+      return keywords.some(kw => kw && haystack.indexOf(String(kw)) !== -1);
+    },
+
+    /**
+     * 内部：根据 data 数组生成行片段并写入 tbody。
+     */
+    _renderRows: function (tbody, data) {
       const fragment = document.createDocumentFragment();
+      const deptKw = OnlineUsersModule.DEPT_HIGHLIGHT_KEYWORDS || [];
+      const posKw = OnlineUsersModule.POS_HIGHLIGHT_KEYWORDS || [];
 
       data.forEach(user => {
         const row = document.createElement("tr");
+
+        // 命中判断：部门 / 岗位任一命中即标记统一高亮行
+        const cstName = user.cstName || "";
+        const posName = user.posName || "";
+        const hitDept = OnlineUsersModule._containsAnyKeyword(cstName, deptKw);
+        const hitPos = OnlineUsersModule._containsAnyKeyword(posName, posKw);
+        if (hitDept || hitPos) row.classList.add("row-highlight");
 
         // 用户名单元格
         const nameCell = OnlineUsersModule.createUserCell(
@@ -1039,9 +1204,15 @@
         const orgCell = OnlineUsersModule.createTextCell(user.orgName, "org");
         row.appendChild(orgCell);
 
-        // IP地址单元格
-        const ipCell = OnlineUsersModule.createTextCell(user.lgnIp, "address");
-        row.appendChild(ipCell);
+        // 部门单元格（命中关键字时额外加 cell-highlight）
+        const cstCell = OnlineUsersModule.createTextCell(cstName, "cstName");
+        if (hitDept) cstCell.classList.add("cell-highlight");
+        row.appendChild(cstCell);
+
+        // 岗位单元格（命中关键字时额外加 cell-highlight）
+        const posCell = OnlineUsersModule.createTextCell(posName, "posName");
+        if (hitPos) posCell.classList.add("cell-highlight");
+        row.appendChild(posCell);
 
         // 时间单元格
         const timeCell = OnlineUsersModule.createTextCell(user.lgnTime, "time");
@@ -1057,6 +1228,46 @@
 
       tbody.innerHTML = "";
       tbody.appendChild(fragment);
+    },
+
+    /**
+     * 渲染用户表格
+     * @param {HTMLElement} tbody - 表格tbody元素
+     * @param {Array} data - 用户数据
+     */
+    renderUserTable: function (tbody, data) {
+      if (!data || data.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="6" style="text-align: center;">暂无在线用户</td></tr>';
+        OnlineUsersModule.currentUserData = [];
+        return;
+      }
+
+      // 缓存数据供排序复用
+      OnlineUsersModule.currentUserData = data;
+
+      // 绑定表头排序事件（仅一次）
+      OnlineUsersModule.bindSortHandlers(tbody);
+
+      // 应用当前排序状态（如有），并同步表头箭头样式
+      let renderData = data;
+      if (OnlineUsersModule.currentSort.key) {
+        renderData = OnlineUsersModule.sortUserData(
+          data,
+          OnlineUsersModule.currentSort.key,
+          OnlineUsersModule.currentSort.direction
+        );
+        const thead = tbody.previousElementSibling;
+        thead.querySelectorAll("th.sortable").forEach(el => {
+          el.classList.remove("sort-asc", "sort-desc");
+          if (el.dataset.sortKey === OnlineUsersModule.currentSort.key) {
+            el.classList.add(
+              OnlineUsersModule.currentSort.direction === "asc" ? "sort-asc" : "sort-desc"
+            );
+          }
+        });
+      }
+
+      OnlineUsersModule._renderRows(tbody, renderData);
     },
 
     /**
@@ -1115,20 +1326,101 @@
     },
 
     /**
+     * 以 USR_ID 为 key 建映射表，用于快速查找用户信息（部门/岗位）。
+     * 主要防御：接口不存在 / 未注册（404 立即触发 onError 或静默不响应）。
+     * 该函数为非关键路径：任何失败都返回空映射，由调用方决定如何降级渲染。
+     * @param {string[]} userIds - 用户ID数组
+     * @returns {Promise<Record<string, object>>} - 用户信息映射表
+     */
+    fetchUserInfoMap: function(userIds) {
+      const emptyMap = Object.create(null);
+      if (!userIds || userIds.length === 0) return Promise.resolve(emptyMap);
+
+      return new Promise(resolve => {
+        let settled = false;
+        const settle = map => {
+          if (settled) return;
+          settled = true;
+          resolve(map || emptyMap);
+        };
+
+        // 安全网：3 秒未收到任何回调，强制返回空映射（接口未注册 / 后端无响应）
+        const timer = setTimeout(() => {
+          console.error("[LiEMSHelper] 获取用户信息超时");
+          settle(emptyMap);
+        }, 3000);
+
+        const onSuccess = result => {
+          clearTimeout(timer);
+          const map = Object.create(null);
+          const list = result && (result.data || result);
+          if (Array.isArray(list)) {
+            list.forEach(u => {
+              if (u && u.USR_ID) map[u.USR_ID] = u;
+            });
+          }
+          settle(map);
+        };
+
+        const onError = err => {
+          clearTimeout(timer);
+          console.error("[LiEMSHelper] 获取用户信息失败:", err);
+          settle(emptyMap);
+        };
+
+        try {
+          // 仅在 lui.ajax 不存在时直接降级，避免同步 throw 阻塞调用方
+          if (typeof lui !== "undefined" && lui && typeof lui.ajax === "function") {
+            lui.ajax("CommonUtils@getUserInfo", { userIds }, onSuccess, onError);
+          } else {
+            clearTimeout(timer);
+            settle(emptyMap);
+          }
+        } catch (e) {
+          console.error("[LiEMSHelper] 获取用户信息异常:", e);
+          clearTimeout(timer);
+          settle(emptyMap);
+        }
+      });
+    },
+
+    /**
      * 更新模态框内容
      * @param {HTMLElement} modal - 模态框元素
      */
     updateOnlineUsersModalContent: async function (modal) {
       const tbody = modal.querySelector("tbody");
       const width = modal.querySelector("thead").clientWidth;
-      tbody.innerHTML = `<tr><td colspan="5" style="text-align: center; width: ${width}px">加载中...</td></tr>`;
+      tbody.innerHTML = `<tr><td colspan="6" style="text-align: center; width: ${width}px">加载中...</td></tr>`;
 
       try {
         const data = await OnlineUsersModule.getOnlineUsers();
+
+        if (!Array.isArray(data) || data.length === 0) return data;
+
+        // 1. 提取 usrId，去重 + 过滤空值
+        const userIds = [...new Set(data.map(item => item.usrId).filter(Boolean))];
+
+        // 2. 拉取部门/岗位（非关键路径：失败时仅缺失这两个字段，仍正常渲染）
+        if (userIds.length > 0) {
+          try {
+            const userMap = await OnlineUsersModule.fetchUserInfoMap(userIds);
+            // 3. 回填字段（O(n) 查表，避免嵌套遍历）
+            data.forEach(item => {
+              const user = userMap[item.usrId];
+              if (!user) return;
+              item.cstName = user.CST_NAM;
+              item.posName = user.POS_NAM;
+            });
+          } catch (e) {
+            console.warn("[LiEMSHelper] 用户信息获取失败，跳过部门/岗位回填:", e);
+          }
+        }
+
         OnlineUsersModule.renderUserTable(tbody, data);
       } catch (error) {
         console.error("Failed to load online users:", error);
-        tbody.innerHTML = `<tr><td colspan="5" style="text-align: center; color: red;">加载失败: ${error.message}</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="6" style="text-align: center; color: red;">加载失败: ${error.message}</td></tr>`;
       }
     },
 
@@ -1141,6 +1433,9 @@
         pageSize: 100,
         pageIndex: 1,
       };
+
+      // 当前登录用户的ID
+      const currentUserId = lui.session.getUserId();
 
       lui.ajax(lui.url.userOnlineList, params, function (result) {
         try {
@@ -1157,7 +1452,7 @@
             user => ({
               usrOnline: user.unam,
               usrId: user.usrId,
-              className: user.usrId == lui.session.getUserId() ? "" : "tochat",
+              className: user.usrId == currentUserId ? "" : "tochat",
               orgName: user.orgName,
               usrChartId: user.usrChartId,
             })
